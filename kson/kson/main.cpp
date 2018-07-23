@@ -8,10 +8,8 @@
 
 int main()
 {
-	kson::Kson kson("kson.txt");
-	kson.testPrint();
-	auto str = kson.parseStr("");
-	std::cout << (str.first ? "true" : "false") << "  " << str.second << std::endl;
+	kson::KsonTest test;
+	test.runAllTest();
 
 	system("pause");
     return 0;

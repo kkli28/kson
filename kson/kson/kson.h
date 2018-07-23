@@ -181,7 +181,7 @@ namespace kson {
 		Kson(const std::string& fileName);
 
 		std::pair<bool, KsonObject> parse();
-		std::string getErrorInfo() { m_error; }
+		std::string getErrorInfo() { return m_error; }
 
 		void testPrint() { std::cout << m_str << std::endl; }
 		
@@ -212,9 +212,7 @@ namespace kson {
 		inline bool isNum(int offset = 0) {
 			return (m_str[m_idx + offset] >= '0' && m_str[m_idx + offset] <= '9');
 		}
-		inline std::string currCS() {
-			return std::string(1, m_str[m_idx]);
-		}
+		inline bool next(char c) { skipWS(); return m_str[m_idx] == c; }
 		
 	private:
 		std::string m_str;      // json文本
@@ -234,15 +232,17 @@ namespace kson {
 	
 	class KsonTest {
 	public:
-		KsonTest(const std::string& fileName) : m_fileName(fileName), m_toFile(true) {}
-		KsonTest() {}
+		KsonTest(const std::string& fileName = "") : m_fileName(fileName), m_toFile(!fileName.empty()) {}
 
+		void runAllTest(const std::string& fileName = "");
+		
 		// 以可视化的方式（竖向文件树）输出 ksonValue
 		void printVisualize(const KsonObject& obj);
 
 	private:
 		void printObject(const KsonObject& obj, const std::string& format);
 		void printArray(const KsonArray& arr, const std::string& format);
+		void printValue(const KsonValue& val, const std::string& format, bool fromObject);
 
 		void print(const std::string& info, bool close = false);
 
