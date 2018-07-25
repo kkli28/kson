@@ -78,7 +78,8 @@ kson 支持以下 5 种数据类型，以及空类型 null
 
 // ---- 示例 ----
 "123"
-"abc\nd"
+"abcd"
+"\t \n \\ \" \'"
 "!@#%$^"
 
 ======= 布尔值 =======
@@ -219,6 +220,9 @@ namespace kson {
 		std::string m_error;    // 错误信息
 		int m_idx = 0;          // 当前解析的位置
 		int m_line = 0;         // 当前行号
+
+		const std::string VALID_CHARACTOR = "~!@#$%^&*()_+`1234567890-=qwertyuiop{}|[]\\asdfghjkl:;'zxcvbnm<>?,./\"";  // 双引号在最后，便于字符串解析
+		using KSON_UNEXPECTED_CHARACTOR = int;
 	};
 }
 

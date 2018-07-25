@@ -25,6 +25,9 @@ KsonValue::KsonValue() :
 	m_num(true, 0, 0.0), m_bool(false),
 	m_null(nullptr), m_type(KsonType::OBJECT) {}
 
+
+
+
 //============================================================
 //  kson解析器
 //============================================================
@@ -44,8 +47,14 @@ Kson::Kson(const std::string& fileName) {
 // TODO: 增加非法字符的提示
 std::pair<bool, KsonObject> Kson::parse()
 {
-	skipWS();
-	return std::move(parseObject(""));
+	try {
+		skipWS();
+		return std::move(parseObject(""));
+	}
+	catch (KSON_UNEXPECTED_CHARACTOR err) {
+		std::cout << m_error << std::endl;
+		return { false, {} };
+	}
 }
 
 // parseObject
@@ -174,29 +183,38 @@ std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
 }
 
 // parseStr
-// TODO: 增加转义字符的支持
 std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
 	DEBUG(std::string("parseStr: '") + std::string(1, m_str[m_idx]) + "'");
 
 	++m_idx;  // 跳过开始的 '"'
-
-	int begIdx = m_idx;
-
-	// TODO: 支持转义字符
+	std::string result;
 	while (isValidStrChar(m_str[m_idx])) {
+
+		// 转义字符 \n \t \\ \' \"
+		char c = m_str[m_idx];
+		if (isChar('\\')) {
+			char c1 = '1';
+			if (isChar(1, 'n'))        c1 = '\n';
+			else if (isChar(1, 't'))   c1 = '\t';
+			else if (isChar(1, '\\'))  c1 = '\\';
+			else if (isChar(1, '\''))  c1 = '\'';
+			else if (isChar(1, '\"'))  c1 = '\"';
+			if (c1 != '1') {
+				c = c1;
+				++m_idx;
+			}
+		}
+		result.push_back(m_str[m_idx]);
 		++m_idx;
 	}
 	
 	if (isChar('"')) {
-		auto begIter = m_str.begin();
-		auto endIter = begIter;
-		std::advance(begIter, begIdx);
-		std::advance(endIter, m_idx);
 
+		// 跳过结尾的 '"'
 		++m_idx;
 		skipWS();
 
-		return { true, std::move(std::string(begIter, endIter)) };
+		return { true, std::move(result) };
 	}
 	
 	addError("expect: '\"'");
@@ -478,6 +496,24 @@ void Kson::skipWS() {
 		}
 		++m_idx;
 	}
+
+	auto valid = [this](char arg) -> bool {
+		return m_str[m_idx] == arg;
+	};
+
+	// charactor: '0' (ASCII: 48) not supported!
+	if (!std::any_of(VALID_CHARACTOR.cbegin(), VALID_CHARACTOR.cend(), valid)) {
+
+		// '\0' 不报异常
+		if (m_str[m_idx] == END_OF_FILE) return;
+
+		char uc = m_str[m_idx];
+		std::string errInfo = "charactor: '";
+		errInfo.push_back(uc);
+		errInfo += "' (ASCII: " + std::to_string(int(uc)) + ") not supported!";
+		addError(errInfo);
+		throw KSON_UNEXPECTED_CHARACTOR();
+	}
 }
 
 // addError
@@ -498,16 +534,13 @@ void Kson::addError(std::string errorInfo, char appChar) {
 
 // isValidStrChar
 bool Kson::isValidStrChar(char c) {
-	std::string str("~`!@#$%^&*()_-+={[}]|\:;'<,>.?/ \t\n");
-	auto valid = [&str, c](char arg) -> bool {
+	auto valid = [this, c] (char arg) -> bool {
 		return arg == c;
 	};
 
-	// 可见字符和 '\n' '\t' ' '
-	if (isAlpha(c) || isNumber(c) || std::any_of(str.begin(), str.end(), valid)) {
-		return true;
-	}
-	return false;
+	std::string str = VALID_CHARACTOR;
+	str.pop_back();
+	return std::any_of(str.begin(), str.end(), valid);
 }
 
 
@@ -529,7 +562,11 @@ void KsonTest::runAllTest(const std::string& fileName) {
 	for (auto file : files) {
 		print(std::string("======== ") + file + " ========\n");
 		Kson ks(file);
-		printVisualize(ks.parse().second);
+		auto obj = ks.parse();
+		if (!obj.first) {
+			print("ERROR OCCURED!\n");
+		}
+		printVisualize(obj.second);
 		print("\n");
 	}
 
