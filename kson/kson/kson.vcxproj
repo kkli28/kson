@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{91AC9B00-F4D9-481E-AC2B-6BF3E8CFA50D}</ProjectGuid>
+    <ProjectGuid>{5AD3D5A7-0F45-439E-8F0D-2C93B37EFA1C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>kson</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>

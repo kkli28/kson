@@ -1,0 +1,7 @@
+//comment!@#~)"
+{ /*comment!@#~)"  */
+    a1 : /*comment!@#~)"  */ 1,
+    /*comment!@#~)"  */b1 : "abcd",   //comment!@#~)   "
+    c1 : {/*comment!@#~)"*/}, /*comment!@#~)"  */
+    d1 : [ /*comment!@#~)" */]  //   comment!@#~)" */
+}

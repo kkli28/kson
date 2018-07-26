@@ -11,58 +11,70 @@
 //============================================================
 
 /*
-kson 支持以下 5 种数据类型，以及空类型 null
+kson 支持 6 种数据类型:
+object:    对象
+array:     数组
+string:    字符串
+number:    数字
+bool:      布尔值
+null:      空
 
-======== 对象 ========
+同时，kson支持两种注释：行注释和块注释，定义同 C 语言中的注释
+
+======== object: 对象 ========
 // key 不用双引号包括
 // value 可以是任何 kson 支持的数据类型
 
 // ---- 格式 ----
 {
-    key : value
-	key : value
+key : value
+key : value
 }
 
 // ---- 示例 ----
 
 {
-    a : 1,
-	b : "123",
-	c : {
-	        a : 1,
-			b : {
-			        //...
-			    }
-		}
-	d : [1, "abc"]
+a : 1,
+b : "123",
+c : {
+a : true,
+b : {
+//...
+}
+}
+d : [1, "abc"]
 }
 
-======== 数组 ========
+======== array: 数组 ========
 
 // ---- 格式 ----
 
 [
-    value, value, value  //...
+value, value, value  //...
 ]
 
 // ---- 示例 ----
 
 [
-    1,
-	"abc",
-	{
-	    a : 1
-	},
-	[1, "abc", true]
+1,
+"abc",
+{
+a : 1
+},
+[1, "abc", true]
 }
 
-======== 数值 ========
+======== string: 字符串 ========
+
+// ---- 格式 ----
+"abcd1234!@#$"    // 普通字符
+"\t \n \" \\"     // 转义字符
+
+======== number: 数值 ========
 
 // ---- 示例 ----
 
 // 整数
-0101    // 二进制
-0123    // 八进制
 1234    // 十进制
 0xab    // 十六进制
 12e3    // 科学计数法
@@ -74,21 +86,22 @@ kson 支持以下 5 种数据类型，以及空类型 null
 1.1
 2.2e3
 
-======= 字符串 =======
-
-// ---- 示例 ----
-"123"
-"abcd"
-"\t \n \\ \" \'"
-"!@#%$^"
-
 ======= 布尔值 =======
 
 // ---- 示例 ----
 true
 false
+TRUE
+FALSE
+
+======== null: 空 ========
+
+// ---- 示例 ----
+null
+NULL
 
 */
+
 
 //============================================================
 //  kson数据结构
@@ -115,7 +128,6 @@ namespace kson {
 	using KsonBool = bool;
 	using KsonNull = void*;
 
-	// 为 number 定义一个类方便 parse
 	struct KsonNum {
 		KsonNum(bool b, int i, double d) : m_isInt(b), m_int(i), m_double(d) {}
 
@@ -127,13 +139,13 @@ namespace kson {
 	class KsonValue {
 	public:
 
-		// friend
+		// friend: kson 解析器，kson 测试类
 		friend class Kson;
 		friend class KsonTest;
 
 		// 获取 KsonType
 		KsonType     getType()   const { return m_type; }
-		
+
 		// 获取值
 		KsonObject   getObject() const { return m_object; }
 		KsonArray    getArray()  const { return m_array; }
@@ -151,10 +163,10 @@ namespace kson {
 		// 从 m_array[index] 中获取 KsonArray
 		KsonArray    getArray(const std::string& key) { return m_object.at(key).m_array; }
 		KsonArray    getArray(int index) { return m_array.at(index).m_array; }
-		
+
 	public:
 		KsonValue();
-		
+
 	private:
 		KsonObject      m_object;   // object
 		KsonArray       m_array;    // array
@@ -163,11 +175,10 @@ namespace kson {
 		KsonBool        m_bool;     // bool
 		KsonNull        m_null;     // null
 
-		// 用于标识上方哪一个变量存储有真正的值
+									// 用于标识该Value实际的类型（object / array / string / number / bool / null)
 		KsonType        m_type = KsonType::OBJECT;
 	};
 }
-
 
 
 //============================================================
@@ -175,20 +186,22 @@ namespace kson {
 //============================================================
 
 namespace kson {
-	
+
 	class Kson
 	{
 	public:
 		Kson(const std::string& fileName);
 
+		// 解析函数
 		std::pair<bool, KsonObject> parse();
+
+		// 获取解析过程中的错误信息
 		std::string getErrorInfo() { return m_error; }
 
+		// 测试是否正确读入了文件
 		void testPrint() { std::cout << m_str << std::endl; }
-		
-		//TEST !!!!!!! 为了测试所以改为public
-	//private:
-	public:
+
+	private:
 		std::pair<bool, KsonObject>   parseObject(const std::string& format);
 		std::pair<bool, KsonArray>    parseArray(const std::string& format);
 		std::pair<bool, KsonStr>      parseStr(const std::string& format);
@@ -198,13 +211,21 @@ namespace kson {
 
 		std::pair<bool, std::string>  parseKey(const std::string& format);
 		std::pair<bool, KsonValue>    parseValue(const std::string& format);
+		std::pair<bool, KsonNum>      parseHex(const std::string& format);
 
+		// 合法的字符串字符
 		bool isValidStrChar(char c);
+
+		// 跳过空白、注释，并检查后续字符是否支持
 		void skipWS();
+		void skipComment();
+
+		// 添加错误信息
 		void addError(std::string errInfo);
 		void addError(std::string errInfo, char appChar);
-		
+
 	private:
+
 		// inlines
 		inline bool isChar(int offset, char c) { return m_str[m_idx + offset] == c; }
 		inline bool isChar(char c) { return isChar(0, c); }
@@ -213,13 +234,12 @@ namespace kson {
 		inline bool isNum(int offset = 0) {
 			return (m_str[m_idx + offset] >= '0' && m_str[m_idx + offset] <= '9');
 		}
-		inline bool next(char c) { skipWS(); return m_str[m_idx] == c; }
-		
+
 	private:
 		std::string m_str;      // json文本
 		std::string m_error;    // 错误信息
 		int m_idx = 0;          // 当前解析的位置
-		int m_line = 0;         // 当前行号
+		int m_line = 1;         // 当前行号（从第一行开始）
 
 		const std::string VALID_CHARACTOR = "~!@#$%^&*()_+`1234567890-=qwertyuiop{}|[]\\asdfghjkl:;'zxcvbnm<>?,./\"";  // 双引号在最后，便于字符串解析
 		using KSON_UNEXPECTED_CHARACTOR = int;
@@ -227,20 +247,19 @@ namespace kson {
 }
 
 
-
 //============================================================
 //  ksonTest: Kson解析器的测试类
 //============================================================
 
 namespace kson {
-	
+
 	class KsonTest {
 	public:
 		KsonTest(const std::string& fileName = "") : m_fileName(fileName), m_toFile(!fileName.empty()) {}
 
 		void runAllTest(const std::string& fileName = "");
-		
-		// 以可视化的方式（竖向文件树）输出 ksonValue
+
+		// 以可视化的方式输出 ksonValue
 		void printVisualize(const KsonObject& obj);
 
 	private:
@@ -249,7 +268,7 @@ namespace kson {
 		void printValue(const KsonValue& val, const std::string& format, bool fromObject);
 
 		void print(const std::string& info, bool close = false);
-
+		
 	private:
 		std::string m_fileName;
 		bool m_toFile = false;

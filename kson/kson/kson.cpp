@@ -1,5 +1,4 @@
-
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "kson.h"
 #include <fstream>
 #include <algorithm>
@@ -9,11 +8,21 @@
 #define END_OF_FILE '\0'
 #define F (format + "    ")
 
+#define CURRENT (m_str[m_idx])
+
 // DEBUG
 #define DEBUG_ENABLE false
 #define DEBUG(arg) { if (DEBUG_ENABLE) std::cout<<format<<arg<<std::endl; }
 
 using namespace kson;
+
+// å·¥å…·å‡½æ•°ï¼šé€šè¿‡å­—ç¬¦ä¸²å’Œå­—ç¬¦æ„å»ºå­—ç¬¦ä¸²
+std::string mkStr(std::string str, char c) {
+	str.push_back('\'');
+	str.push_back(c);
+	str.push_back('\'');
+	return std::move(str);
+}
 
 //============================================================
 //  ksonValue
@@ -26,46 +35,44 @@ KsonValue::KsonValue() :
 	m_null(nullptr), m_type(KsonType::OBJECT) {}
 
 
-
-
 //============================================================
-//  kson½âÎöÆ÷
+//  ksonè§£æå™¨
 //============================================================
 
 // Kson
 Kson::Kson(const std::string& fileName) {
 	std::ifstream file(fileName);
+	file >> std::noskipws;  //ä¸è¦è·³è¿‡ç©ºç™½
 	char ic;
 	while (file >> ic) {
 		m_str.push_back(ic);
 	}
 	file.close();
-	m_str.push_back(END_OF_FILE);  // Ä©Î²Ôö¼Ó¿Õ°×·û '\0' À´±ê¼Ç½áÊø
+	m_str.push_back(END_OF_FILE);  // æœ«å°¾å¢åŠ ç©ºç™½ç¬¦ '\0' æ¥æ ‡è®°ç»“æŸ
 }
 
 // parse
-// TODO: Ôö¼Ó·Ç·¨×Ö·ûµÄÌáÊ¾
 std::pair<bool, KsonObject> Kson::parse()
 {
 	try {
 		skipWS();
 		return std::move(parseObject(""));
 	}
-	catch (KSON_UNEXPECTED_CHARACTOR err) {
+	catch (KSON_UNEXPECTED_CHARACTOR) {  // é‡åˆ°ä¸æ”¯æŒçš„å­—ç¬¦
 		std::cout << m_error << std::endl;
-		return { false, {} };
+		return { false,{} };
 	}
 }
 
 // parseObject
 std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
-	DEBUG(std::string("parseObject: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseObject: ", CURRENT));
 
 	KsonObject object;
 	if (isChar('{')) {
 		++m_idx;
 		skipWS();
-		
+
 		// parse key/value
 		while (!isChar('}') && !isChar(END_OF_FILE)) {
 
@@ -74,7 +81,7 @@ std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
 			skipWS();
 
 			if (!ret.first) {
-				addError("expect: key");
+				addError("expect key");
 				return { false, std::move(object) };
 			}
 
@@ -86,27 +93,27 @@ std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
 				auto val = parseValue(F);
 				skipWS();
 
-				// Ã»ÓĞ³É¹¦½âÎöµ½ value£¬ÔòÖ±½ÓÍË³ö
+				// æ²¡æœ‰æˆåŠŸè§£æåˆ° valueï¼Œåˆ™ç›´æ¥é€€å‡º
 				if (!val.first) {
-					addError("expect: value");
+					addError("expect value");
 					return { false, std::move(object) };
 				}
 
-				// Ïò object ÖĞĞ´Èë key/value
+				// å‘ object ä¸­å†™å…¥ key/value
 				object[ret.second] = std::move(val.second);
 			}
 			else {
-				addError("expect ':'");
+				addError(mkStr("unexpected  ", CURRENT) + ", expect ':'");
 				return { false, std::move(object) };
 			}
 
-			if (!isChar('}')){
+			if (!isChar('}')) {
 				if (isChar(',')) {
 					++m_idx;
 					skipWS();
 				}
 				else {
-					addError("expect ','");
+					addError(mkStr("unexpected  ", CURRENT) + ", expect ','");
 					return { false, std::move(object) };
 				}
 			}
@@ -119,19 +126,20 @@ std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
 			return { true, std::move(object) };
 		}
 
-		// ÎÄ¼ş½áÊø
+		// æ–‡ä»¶ç»“æŸ
 		else {
-			addError("expect '}'");
+			addError("unexpected  END_OF_FILE, expect '}'");
 			return { false, std::move(object) };
 		}
 	}
 
+	addError(mkStr("unexpected  ", CURRENT) + ", expect '{'");
 	return { false, std::move(object) };
 }
 
 // parseArray
 std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
-	DEBUG(std::string("parseArray: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseArray: ", CURRENT));
 
 	KsonArray arr;
 	if (isChar('[')) {
@@ -144,22 +152,22 @@ std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
 			auto val = parseValue(F);
 			skipWS();
 
-			// Ã»ÓĞ³É¹¦½âÎöµ½ value£¬ÔòÖ±½ÓÍË³ö
+			// æ²¡æœ‰æˆåŠŸè§£æåˆ° valueï¼Œåˆ™ç›´æ¥é€€å‡º
 			if (!val.first) {
-				addError("expect: value");
+				addError("expect value");
 				return { false, std::move(arr) };
 			}
 
-			// Ïò object ÖĞĞ´Èë key/value
+			// å‘ object ä¸­å†™å…¥ key/value
 			arr.push_back(std::move(val.second));
-			
+
 			if (!isChar(']')) {
 				if (isChar(',')) {
 					++m_idx;
 					skipWS();
 				}
 				else {
-					addError("expect ','");
+					addError(mkStr("unexpected  ", CURRENT) + ", expect ','");
 					return { false, std::move(arr) };
 				}
 			}
@@ -168,13 +176,13 @@ std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
 		if (isChar(']')) {
 			++m_idx;
 			skipWS();
-
+			
 			return { true, std::move(arr) };
 		}
 
-		// ÎÄ¼ş½áÊø
+		// æ–‡ä»¶ç»“æŸ
 		else {
-			addError("expect ']'");
+			addError("unexpected  END_OF_FILE, expect ']'");
 			return { false, std::move(arr) };
 		}
 	}
@@ -184,14 +192,14 @@ std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
 
 // parseStr
 std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
-	DEBUG(std::string("parseStr: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseStr: ", CURRENT));
 
-	++m_idx;  // Ìø¹ı¿ªÊ¼µÄ '"'
+	++m_idx;  // è·³è¿‡å¼€å§‹çš„ '"'
 	std::string result;
-	while (isValidStrChar(m_str[m_idx])) {
+	while (isValidStrChar(CURRENT)) {
 
-		// ×ªÒå×Ö·û \n \t \\ \' \"
-		char c = m_str[m_idx];
+		// è½¬ä¹‰å­—ç¬¦ \n \t \\ \' \"
+		char c = CURRENT;
 		if (isChar('\\')) {
 			char c1 = '1';
 			if (isChar(1, 'n'))        c1 = '\n';
@@ -204,33 +212,32 @@ std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
 				++m_idx;
 			}
 		}
-		result.push_back(m_str[m_idx]);
+		result.push_back(CURRENT);
 		++m_idx;
 	}
-	
+
 	if (isChar('"')) {
 
-		// Ìø¹ı½áÎ²µÄ '"'
+		// è·³è¿‡ç»“å°¾çš„ '"'
 		++m_idx;
 		skipWS();
 
 		return { true, std::move(result) };
 	}
-	
-	addError("expect: '\"'");
+
+	addError(mkStr("unexpected  ", CURRENT) + ", expect '\"'");
 	return { false, "" };
 }
 
 // paseInt : integer / floating
-// TODO: Ôö¼Ó¶ş½øÖÆ/°Ë½øÖÆ/Ê®Áù½øÖÆ µÄÖ§³Ö
 std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
-	DEBUG(std::string("parseNum: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseNum: ", CURRENT));
 
 	int intNum = 0;
 	double doubleNum = 0;
-	bool isNeg = false;   // ÊÇ·ñÎª¸ºÊı
-	bool isInt = true;    // ÊÇ·ñÎªÕûÊı
-	bool hasNum = false;  // ÊÇ·ñ½âÎöµ½Êı×Ö
+	bool isNeg = false;   // æ˜¯å¦ä¸ºè´Ÿæ•°
+	bool isInt = true;    // æ˜¯å¦ä¸ºæ•´æ•°
+	bool hasNum = false;  // æ˜¯å¦è§£æåˆ°æ•°å­—
 
 	if (isChar('+')) {
 		++m_idx;
@@ -243,19 +250,27 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 	}
 	if (isNum()) hasNum = true;
 	else {
-		addError("expect: number.");
+		addError(mkStr("unexpected  ", CURRENT) + ", expect number.");
 		return { false, KsonNum(true, 0, 0.0) };
 	}
-	
-	// ÓÉ kson ÎÄ¼ş¶¨ÒåÕß×Ô¼º×¢ÒâÕûĞÍÖµµÄ´óĞ¡£¬¹ı´óÔò»áÒç³ö
+
+	// åå…­è¿›åˆ¶
+	if (isChar('0') && (isChar(1, 'x') || isChar('X'))) {
+		m_idx += 2;
+		return parseHex(F);
+	}
+
+	// æ•´æ•°æˆ–æµ®ç‚¹æ•°
+	// ä¸åˆ¤æ–­æ•°å€¼æ˜¯å¦æº¢å‡ºï¼Œç”±ä½¿ç”¨è€…è‡ªå·±æ³¨æ„æ•´å‹å€¼çš„å¤§å°
 	while (isNum()) {
-		intNum = intNum * 10 + m_str[m_idx] - 0x30;
+		intNum = intNum * 10 + CURRENT - 0x30;
 		++m_idx;
 	}
-	
+
+	// æµ®ç‚¹æ•°
 	if (isChar('.')) {
 
-		// Ğ¡Êıµãºó±ØĞëÓĞÊı×Ö²ÅĞĞ
+		// å°æ•°ç‚¹åå¿…é¡»æœ‰æ•°å­—æ‰è¡Œ
 		if (!isNum(1)) {
 			skipWS();
 			return { false, KsonNum(true, 0, 0.0) };
@@ -264,15 +279,15 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 		isInt = false;
 		++m_idx;
 
-		int tail = 0;        // ¼ÇÂ¼Ğ¡ÊıµãºóµÄÊı×Ö
-		int count = 0;       // ¼ÇÂ¼Ğ¡ÊıµãºóµÄÊı×ÖµÄÎ»Êı
+		int tail = 0;        // è®°å½•å°æ•°ç‚¹åçš„æ•°å­—
+		int count = 0;       // è®°å½•å°æ•°ç‚¹åçš„æ•°å­—çš„ä½æ•°
 		while (isNum()) {
-			tail = tail * 10 + m_str[m_idx] - 0x30;
+			tail = tail * 10 + CURRENT - 0x30;
 			++count;
 			++m_idx;
 		}
 		skipWS();
-		
+
 		double doubleTail = tail;
 		while (--count >= 0) {
 			doubleTail /= 10;
@@ -280,24 +295,25 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 		doubleNum = intNum + doubleTail;
 	}
 
+	// ç§‘å­¦è®¡æ•°æ³•
 	if (isChar('e') || isChar('E')) {
 
-		// ¿ÆÑ§¼ÆÊı·¨×Ö·û E ºóÃæ±ØĞëÓĞÊı×Ö
+		// ç§‘å­¦è®¡æ•°æ³•å­—ç¬¦ E åé¢å¿…é¡»æœ‰æ•°å­—
 		if (!isNum(1)) {
 			skipWS();
-			addError("expect: number after 'E'");
+			addError(mkStr("unexpected  ", CURRENT) + ", expect number after 'E'");
 			return { false, std::move(KsonNum(false, 0, 0.0)) };
 		}
 
 		++m_idx;
-		
-		int tail = 0;      // ¼ÇÂ¼ E ºóÃæµÄÊı×Ö
+
+		int tail = 0;      // è®°å½• E åé¢çš„æ•°å­—
 		while (isNum()) {
-			tail = tail * 10 + m_str[m_idx] - 0x30;
+			tail = tail * 10 + CURRENT - 0x30;
 			++m_idx;
 		}
 		skipWS();
-		
+
 		if (isInt) {
 			while (tail > 0) {
 				intNum *= 10;
@@ -309,7 +325,7 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 			}
 		}
 	}
-	
+
 	if (isNeg) {
 		if (isInt) intNum = -intNum;
 		else doubleNum = -doubleNum;
@@ -321,7 +337,7 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 
 // parseBool: true / TRUE / false / FALSE
 std::pair<bool, KsonBool> Kson::parseBool(const std::string& format) {
-	DEBUG(std::string("parseBool: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseBool: ", CURRENT));
 
 	// true
 	bool isTL =
@@ -338,7 +354,7 @@ std::pair<bool, KsonBool> Kson::parseBool(const std::string& format) {
 		&& isChar(3, 'E');
 
 	// false
-	bool isFL = 
+	bool isFL =
 		isChar(0, 'f')
 		&& isChar(1, 'a')
 		&& isChar(2, 'l')
@@ -373,7 +389,7 @@ std::pair<bool, KsonBool> Kson::parseBool(const std::string& format) {
 
 // parseNull: null / NULL
 std::pair<bool, KsonNull> Kson::parseNull(const std::string& format) {
-	DEBUG(std::string("parseNull: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseNull: ", CURRENT));
 
 	// null
 	bool isNL =
@@ -392,28 +408,29 @@ std::pair<bool, KsonNull> Kson::parseNull(const std::string& format) {
 	skipWS();
 
 	// null / NULL
-	if (isNL || isNU){
+	if (isNL || isNU) {
 		m_idx += 4;
 		return { true, nullptr };
 	}
 
-	addError("expect: null/NULL");
+	addError("expect null/NULL");
 	return { false, nullptr };
 }
 
 // parseKey
 std::pair<bool, std::string> Kson::parseKey(const std::string& format) {
-	DEBUG(std::string("parseKey: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseKey: ", CURRENT));
 
 	std::string str;
-	// µÚÒ»¸ö×Ö·û²»ÄÜÊÇÊı×Ö
-	if (!isAlpha(m_str[m_idx])) {
+	// ç¬¬ä¸€ä¸ªå­—ç¬¦ä¸èƒ½æ˜¯æ•°å­—
+	if (!isAlpha(CURRENT) && !isChar('_')) {
+		addError(mkStr("unexpected  ", CURRENT) + ", expect '_' or 'a~zA~Z' for key.");
 		return { false, std::move(str) };
 	}
 
-	// Ö§³Ö ×ÖÄ¸/Êı×Ö/ÏÂ»®Ïß
-	while (isAlpha(m_str[m_idx]) || isNumber(m_str[m_idx]) || isChar('_')) {
-		str.push_back(m_str[m_idx]);
+	// æ”¯æŒ å­—æ¯/æ•°å­—/ä¸‹åˆ’çº¿
+	while (isAlpha(CURRENT) || isNumber(CURRENT) || isChar('_')) {
+		str.push_back(CURRENT);
 		++m_idx;
 	}
 	skipWS();
@@ -423,7 +440,7 @@ std::pair<bool, std::string> Kson::parseKey(const std::string& format) {
 
 // parseValue
 std::pair<bool, KsonValue> Kson::parseValue(const std::string& format) {
-	DEBUG(std::string("parseValue: '") + std::string(1, m_str[m_idx]) + "'");
+	DEBUG(mkStr("parseValue: ", CURRENT));
 
 	KsonValue value;
 	// object
@@ -479,45 +496,90 @@ std::pair<bool, KsonValue> Kson::parseValue(const std::string& format) {
 		value.m_type = KsonType::NUL;
 		return { ret.first, std::move(value) };
 	}
-	
+
 	// others
 	else {
-		skipWS();
-		addError(std::string("unexpect: "), m_str[m_idx]);
+		addError("unexpect ", CURRENT);
 		return { false, std::move(value) };
 	}
 }
 
+// parseHex
+std::pair<bool, KsonNum> Kson::parseHex(const std::string& format) {
+	auto isAF = [](char c) -> bool {
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	};
+
+	// 0x åé¢å¿…é¡»è¦æœ‰æ•°å­—
+	if (!isNum() || !isAF(CURRENT)) {
+		addError(mkStr("unexpected  ", CURRENT) + ", expect number.");
+		return { false, KsonNum(true, 0, 0.0) };
+	}
+
+	int num = 0;
+	while (isNum() || isAF(CURRENT)) {
+		num = num * 16 + (CURRENT & 15) + (CURRENT >= 'A' ? 9 : 0);
+		++m_idx;
+	}
+	skipWS();
+	return { true, KsonNum(true, num, 0.0) };
+}
+
 // skipWS
 void Kson::skipWS() {
-	while (m_str[m_idx] == ' ' || m_str[m_idx] == '\n' || m_str[m_idx] == '\t') {
-		if (m_str[m_idx] == '\n') {
+	while (CURRENT == ' ' || CURRENT == '\n' || CURRENT == '\t') {
+		if (CURRENT == '\n') {
 			++m_line;
 		}
 		++m_idx;
 	}
 
 	auto valid = [this](char arg) -> bool {
-		return m_str[m_idx] == arg;
+		return CURRENT == arg;
 	};
 
 	// charactor: '0' (ASCII: 48) not supported!
 	if (!std::any_of(VALID_CHARACTOR.cbegin(), VALID_CHARACTOR.cend(), valid)) {
 
-		// '\0' ²»±¨Òì³£
-		if (m_str[m_idx] == END_OF_FILE) return;
+		// '\0' ä¸æŠ¥å¼‚å¸¸
+		if (CURRENT == END_OF_FILE) return;
 
-		char uc = m_str[m_idx];
-		std::string errInfo = "charactor: '";
-		errInfo.push_back(uc);
-		errInfo += "' (ASCII: " + std::to_string(int(uc)) + ") not supported!";
-		addError(errInfo);
+		addError(mkStr("charactor: ", CURRENT) + " (ASCII: " + std::to_string(int(CURRENT)) + ") not supported!");
 		throw KSON_UNEXPECTED_CHARACTOR();
+	}
+
+	// è·³è¿‡æ³¨é‡Š
+	if (isChar('/')) {
+
+		// è¡Œæ³¨é‡Š
+		if (isChar(1, '/')) {
+			m_idx += 2;
+			while (CURRENT != '\n') {
+				if (isChar(END_OF_FILE)) return;
+				++m_idx;
+			}
+			skipWS();
+		}
+		
+		// å—æ³¨é‡Š
+		else if (isChar(1, '*')) {
+			m_idx += 2;
+			while (true) {
+				if (isChar(END_OF_FILE)) return;
+				if (isChar('*') && isChar(1, '/')) {
+					m_idx += 2;
+					break;
+				}
+				++m_idx;
+			}
+			skipWS();
+		}
 	}
 }
 
 // addError
 void Kson::addError(std::string errorInfo) {
+	m_error += "line ";
 	m_error += std::move(std::to_string(m_line));
 	m_error += ": ";
 	m_error += errorInfo + "\n";
@@ -525,8 +587,7 @@ void Kson::addError(std::string errorInfo) {
 
 // addError
 void Kson::addError(std::string errorInfo, char appChar) {
-	std::string str(1, appChar);
-	errorInfo += appChar;
+	errorInfo.push_back(appChar);
 	m_error += std::move(std::to_string(m_line));
 	m_error += ": ";
 	m_error += errorInfo + "\n";
@@ -534,7 +595,7 @@ void Kson::addError(std::string errorInfo, char appChar) {
 
 // isValidStrChar
 bool Kson::isValidStrChar(char c) {
-	auto valid = [this, c] (char arg) -> bool {
+	auto valid = [this, c](char arg) -> bool {
 		return arg == c;
 	};
 
@@ -544,10 +605,8 @@ bool Kson::isValidStrChar(char c) {
 }
 
 
-
-
 //============================================================
-//  ksonTest: Kson½âÎöÆ÷µÄ²âÊÔÀà
+//  ksonTest: Ksonè§£æå™¨çš„æµ‹è¯•ç±»
 //============================================================
 
 void KsonTest::runAllTest(const std::string& fileName) {
@@ -555,8 +614,27 @@ void KsonTest::runAllTest(const std::string& fileName) {
 	m_toFile = !fileName.empty();
 
 	std::vector<std::string> files = {
-		"test_case/test_normal.kson",
-		"test_case/test_space.kson"
+
+		// æµ‹è¯• object / array / string / number / bool / null
+		"test_case/test_k_object.kson",
+		"test_case/test_k_array.kson",
+		"test_case/test_k_string.kson",
+		"test_case/test_k_number.kson",
+		"test_case/test_k_bool.kson",
+		"test_case/test_k_null.kson",
+
+		// æµ‹è¯•æ‰€æœ‰çš„ç»„åˆ
+		"test_case/test_all1.kson",
+		"test_case/test_all2.kson"
+		"test_case/test_all3.kson",
+		"test_case/test_all4.kson",
+		"test_case/test_all5.kson",
+		"test_case/test_all6.kson",
+
+		// æµ‹è¯•ï¼šç©ºæ ¼ / æ³¨é‡Š / ä¸æ”¯æŒå­—ç¬¦
+		"test_case/test_space.kson",
+		"test_case/test_comment.kson",
+		//"test_case/test_unsurpport.kson",   // éœ€è¦å•ç‹¬é€šè¿‡ç¨‹åºè¿›è¡Œæµ‹è¯•ï¼Œä¸çŸ¥é“æ€ä¹ˆå°†ä¸æ”¯æŒå­—ç¬¦å†™å…¥æ–‡ä»¶ã€‚ã€‚ã€‚
 	};
 
 	for (auto file : files) {
@@ -564,7 +642,9 @@ void KsonTest::runAllTest(const std::string& fileName) {
 		Kson ks(file);
 		auto obj = ks.parse();
 		if (!obj.first) {
-			print("ERROR OCCURED!\n");
+			print("\n######## ERROR ! ########\n\n");
+			print(ks.getErrorInfo());
+			print("\n");
 		}
 		printVisualize(obj.second);
 		print("\n");
@@ -574,7 +654,7 @@ void KsonTest::runAllTest(const std::string& fileName) {
 }
 
 void KsonTest::printVisualize(const KsonObject& val) {
-	print("{\n");
+	print("[RESULT]\n{\n");
 	printObject(val, "    ");
 	print("}\n", true);
 }
@@ -590,7 +670,7 @@ void KsonTest::printObject(const KsonObject& obj, const std::string& format) {
 
 		printValue(val, format, true);
 
-		if (index < size-1) print(",");
+		if (index < size - 1) print(",");
 		print("\n");
 		++index;
 	}
@@ -605,7 +685,7 @@ void KsonTest::printArray(const KsonArray& arr, const std::string& format) {
 
 		printValue(val, format, false);
 
-		if (index < size-1) print(",");
+		if (index < size - 1) print(",");
 		print("\n");
 		++index;
 	}

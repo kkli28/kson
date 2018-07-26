@@ -3,15 +3,14 @@
 
 #include "stdafx.h"
 #include "kson.h"
-#include <iostream>
-#include <fstream>
+
+using namespace kson;
 
 int main()
 {
-	kson::KsonTest test;
+	KsonTest test;
 	test.runAllTest();
 
 	system("pause");
     return 0;
 }
-
