@@ -1,7 +1,16 @@
 //comment!@#~)"
 { /*comment!@#~)"  */
-    a1 : /*comment!@#~)"  */ 1,
-    /*comment!@#~)"  */b1 : "abcd",   //comment!@#~)   "
-    c1 : {/*comment!@#~)"*/}, /*comment!@#~)"  */
-    d1 : [ /*comment!@#~)" */]  //   comment!@#~)" */
+    a : /*comment!@#~)"  */ 1,
+    /*comment!@#~)"  */b : "abcd",   //comment!@#~)   "
+    c : {/*comment!@#~)"*/}, /*comment!@#~)"  */
+    d : [ /*comment!@#~)" */]  //   comment!@#~)" */
 }
+
+/*
+{
+    a: 1,
+    b: "abcd",
+    c: {},
+    d: []
+}
+*/

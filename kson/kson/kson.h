@@ -166,7 +166,13 @@ namespace kson {
 
 	public:
 		KsonValue();
-
+		KsonValue(
+			KsonType type,
+			KsonObject&& obj, KsonArray&& arr, KsonStr&& str,
+			KsonNum&& num, KsonBool bol, KsonNull nul
+		) : m_type(type), m_object(std::move(obj)), m_array(std::move(arr)), m_str(std::move(str)), 
+			m_num(std::move(num)), m_bool(bol), m_null(nul) {}
+		
 	private:
 		KsonObject      m_object;   // object
 		KsonArray       m_array;    // array
@@ -175,7 +181,6 @@ namespace kson {
 		KsonBool        m_bool;     // bool
 		KsonNull        m_null;     // null
 
-									// 用于标识该Value实际的类型（object / array / string / number / bool / null)
 		KsonType        m_type = KsonType::OBJECT;
 	};
 }
@@ -190,16 +195,17 @@ namespace kson {
 	class Kson
 	{
 	public:
-		Kson(const std::string& fileName);
-
+		// 通过传入文件名，或kson字符串来进行解析
+		Kson(const std::string& str, bool isFile = true);
+		
 		// 解析函数
 		std::pair<bool, KsonObject> parse();
-
+		
 		// 获取解析过程中的错误信息
 		std::string getErrorInfo() { return m_error; }
 
 		// 测试是否正确读入了文件
-		void testPrint() { std::cout << m_str << std::endl; }
+		void printFile() { std::cout << m_str << std::endl; }
 
 	private:
 		std::pair<bool, KsonObject>   parseObject(const std::string& format);
@@ -241,37 +247,8 @@ namespace kson {
 		int m_idx = 0;          // 当前解析的位置
 		int m_line = 1;         // 当前行号（从第一行开始）
 
-		const std::string VALID_CHARACTOR = "~!@#$%^&*()_+`1234567890-=qwertyuiop{}|[]\\asdfghjkl:;'zxcvbnm<>?,./\"";  // 双引号在最后，便于字符串解析
+		const std::string VALID_CHARACTOR = "~!@#$%^&*()_+`1234567890-=qwertyuiopQWERTYUIOP{}|[]\\asdfghjklASDFGHJKL:;'zxcvbnmZXCVBNM<>?,./\"";  // 双引号在最后，便于字符串解析
 		using KSON_UNEXPECTED_CHARACTOR = int;
-	};
-}
-
-
-//============================================================
-//  ksonTest: Kson解析器的测试类
-//============================================================
-
-namespace kson {
-
-	class KsonTest {
-	public:
-		KsonTest(const std::string& fileName = "") : m_fileName(fileName), m_toFile(!fileName.empty()) {}
-
-		void runAllTest(const std::string& fileName = "");
-
-		// 以可视化的方式输出 ksonValue
-		void printVisualize(const KsonObject& obj);
-
-	private:
-		void printObject(const KsonObject& obj, const std::string& format);
-		void printArray(const KsonArray& arr, const std::string& format);
-		void printValue(const KsonValue& val, const std::string& format, bool fromObject);
-
-		void print(const std::string& info, bool close = false);
-		
-	private:
-		std::string m_fileName;
-		bool m_toFile = false;
 	};
 }
 

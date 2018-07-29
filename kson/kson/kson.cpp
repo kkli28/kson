@@ -12,7 +12,7 @@
 
 // DEBUG
 #define DEBUG_ENABLE false
-#define DEBUG(arg) { if (DEBUG_ENABLE) std::cout<<format<<arg<<std::endl; }
+#define KSON_DEBUG(arg) { if (DEBUG_ENABLE) std::cout<<format<<arg<<std::endl; }
 
 using namespace kson;
 
@@ -40,15 +40,20 @@ KsonValue::KsonValue() :
 //============================================================
 
 // Kson
-Kson::Kson(const std::string& fileName) {
-	std::ifstream file(fileName);
-	file >> std::noskipws;  //不要跳过空白
-	char ic;
-	while (file >> ic) {
-		m_str.push_back(ic);
+Kson::Kson(const std::string& str, bool isFile) {
+	if (isFile) {
+		std::ifstream file(str);
+		file >> std::noskipws;  //不要跳过空白
+		char ic;
+		while (file >> ic) {
+			m_str.push_back(ic);
+		}
+		file.close();
+		m_str.push_back(END_OF_FILE);  // 末尾增加空白符 '\0' 来标记结束
 	}
-	file.close();
-	m_str.push_back(END_OF_FILE);  // 末尾增加空白符 '\0' 来标记结束
+	else {
+		m_str = str;
+	}
 }
 
 // parse
@@ -66,7 +71,7 @@ std::pair<bool, KsonObject> Kson::parse()
 
 // parseObject
 std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
-	DEBUG(mkStr("parseObject: ", CURRENT));
+	KSON_DEBUG(mkStr("parseObject: ", CURRENT));
 
 	KsonObject object;
 	if (isChar('{')) {
@@ -139,7 +144,7 @@ std::pair<bool, KsonObject> Kson::parseObject(const std::string& format) {
 
 // parseArray
 std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
-	DEBUG(mkStr("parseArray: ", CURRENT));
+	KSON_DEBUG(mkStr("parseArray: ", CURRENT));
 
 	KsonArray arr;
 	if (isChar('[')) {
@@ -192,7 +197,7 @@ std::pair<bool, KsonArray> Kson::parseArray(const std::string& format) {
 
 // parseStr
 std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
-	DEBUG(mkStr("parseStr: ", CURRENT));
+	KSON_DEBUG(mkStr("parseStr: ", CURRENT));
 
 	++m_idx;  // 跳过开始的 '"'
 	std::string result;
@@ -231,7 +236,7 @@ std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
 
 // paseInt : integer / floating
 std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
-	DEBUG(mkStr("parseNum: ", CURRENT));
+	KSON_DEBUG(mkStr("parseNum: ", CURRENT));
 
 	int intNum = 0;
 	double doubleNum = 0;
@@ -337,7 +342,7 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 
 // parseBool: true / TRUE / false / FALSE
 std::pair<bool, KsonBool> Kson::parseBool(const std::string& format) {
-	DEBUG(mkStr("parseBool: ", CURRENT));
+	KSON_DEBUG(mkStr("parseBool: ", CURRENT));
 
 	// true
 	bool isTL =
@@ -389,7 +394,7 @@ std::pair<bool, KsonBool> Kson::parseBool(const std::string& format) {
 
 // parseNull: null / NULL
 std::pair<bool, KsonNull> Kson::parseNull(const std::string& format) {
-	DEBUG(mkStr("parseNull: ", CURRENT));
+	KSON_DEBUG(mkStr("parseNull: ", CURRENT));
 
 	// null
 	bool isNL =
@@ -419,7 +424,7 @@ std::pair<bool, KsonNull> Kson::parseNull(const std::string& format) {
 
 // parseKey
 std::pair<bool, std::string> Kson::parseKey(const std::string& format) {
-	DEBUG(mkStr("parseKey: ", CURRENT));
+	KSON_DEBUG(mkStr("parseKey: ", CURRENT));
 
 	std::string str;
 	// 第一个字符不能是数字
@@ -440,7 +445,7 @@ std::pair<bool, std::string> Kson::parseKey(const std::string& format) {
 
 // parseValue
 std::pair<bool, KsonValue> Kson::parseValue(const std::string& format) {
-	DEBUG(mkStr("parseValue: ", CURRENT));
+	KSON_DEBUG(mkStr("parseValue: ", CURRENT));
 
 	KsonValue value;
 	// object
@@ -602,152 +607,4 @@ bool Kson::isValidStrChar(char c) {
 	std::string str = VALID_CHARACTOR;
 	str.pop_back();
 	return std::any_of(str.begin(), str.end(), valid);
-}
-
-
-//============================================================
-//  ksonTest: Kson解析器的测试类
-//============================================================
-
-void KsonTest::runAllTest(const std::string& fileName) {
-	bool tempToFile = m_toFile;
-	m_toFile = !fileName.empty();
-
-	std::vector<std::string> files = {
-
-		// 测试 object / array / string / number / bool / null
-		"test_case/test_k_object.kson",
-		"test_case/test_k_array.kson",
-		"test_case/test_k_string.kson",
-		"test_case/test_k_number.kson",
-		"test_case/test_k_bool.kson",
-		"test_case/test_k_null.kson",
-
-		// 测试所有的组合
-		"test_case/test_all1.kson",
-		"test_case/test_all2.kson"
-		"test_case/test_all3.kson",
-		"test_case/test_all4.kson",
-		"test_case/test_all5.kson",
-		"test_case/test_all6.kson",
-
-		// 测试：空格 / 注释 / 不支持字符
-		"test_case/test_space.kson",
-		"test_case/test_comment.kson",
-		//"test_case/test_unsurpport.kson",   // 需要单独通过程序进行测试，不知道怎么将不支持字符写入文件。。。
-	};
-
-	for (auto file : files) {
-		print(std::string("======== ") + file + " ========\n");
-		Kson ks(file);
-		auto obj = ks.parse();
-		if (!obj.first) {
-			print("\n######## ERROR ! ########\n\n");
-			print(ks.getErrorInfo());
-			print("\n");
-		}
-		printVisualize(obj.second);
-		print("\n");
-	}
-
-	m_toFile = tempToFile;
-}
-
-void KsonTest::printVisualize(const KsonObject& val) {
-	print("[RESULT]\n{\n");
-	printObject(val, "    ");
-	print("}\n", true);
-}
-
-void KsonTest::printObject(const KsonObject& obj, const std::string& format) {
-
-	int size = obj.size();
-	int index = 0;
-
-	for (auto p : obj) {
-		print(format + p.first + ": ");
-		auto val = p.second;
-
-		printValue(val, format, true);
-
-		if (index < size - 1) print(",");
-		print("\n");
-		++index;
-	}
-}
-
-void KsonTest::printArray(const KsonArray& arr, const std::string& format) {
-
-	int size = arr.size();
-	int index = 0;
-
-	for (auto val : arr) {
-
-		printValue(val, format, false);
-
-		if (index < size - 1) print(",");
-		print("\n");
-		++index;
-	}
-}
-
-void KsonTest::printValue(const KsonValue& val, const std::string& format, bool fromObject) {
-
-	switch (val.m_type) {
-	case KsonType::OBJECT:
-		if (fromObject) print("{\n");
-		else print(format + "{\n");
-		printObject(val.m_object, F);
-		print(format + "}");
-		break;
-
-	case KsonType::ARRAY:
-		if (fromObject) print("[\n");
-		else print(format + "[\n");
-		printArray(val.m_array, F);
-		print(format + "]");
-		break;
-
-	case KsonType::STRING: {
-		std::string str;
-		if (!fromObject) str += format;
-		print(str + "\"" + val.m_str + "\"");
-		break;
-	}
-
-	case KsonType::NUMBER: {
-		auto num = val.m_num;
-		std::string str;
-		if (!fromObject) str += format;
-		if (num.m_isInt) print(str + std::to_string(num.m_int));
-		else print(str + std::to_string(num.m_double));
-		break;
-	}
-
-	case KsonType::BOOL: {
-		std::string str;
-		if (!fromObject) str += format;
-		print(str + (val.m_bool ? "true" : "false"));
-		break;
-	}
-
-	case KsonType::NUL: {
-		std::string str;
-		if (!fromObject) str += format;
-		print(str + "null");
-		break;
-	}
-
-	default:
-		throw 1;
-	}
-}
-
-void KsonTest::print(const std::string& info, bool close) {
-	static std::ofstream outFile(m_fileName);
-
-	if (m_toFile) outFile << info;
-	else std::cout << info;
-
-	if (close) outFile.close();
 }

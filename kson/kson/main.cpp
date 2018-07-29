@@ -2,14 +2,14 @@
 //
 
 #include "stdafx.h"
-#include "kson.h"
+#include "ktest.h"
 
 using namespace kson;
 
 int main()
 {
 	KsonTest test;
-	test.runAllTest();
+	test.runAllTest(KsonTestType::ONLY_RESULT);
 
 	system("pause");
     return 0;
