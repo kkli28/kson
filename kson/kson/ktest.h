@@ -29,18 +29,8 @@ namespace kson {
 	private:
 		
 		// 测试各种文件，比较kson解析出的内容是否与预期相同
-		void testObject();
-		void testArray();
-		void testString();
-		void testNumber();
-		void testBool();
-		void testNull();
 		void testAll1();
 		void testAll2();
-		void testAll3();
-		void testAll4();
-		void testAll5();
-		void testAll6();
 		void testSpace();
 		void testComment();
 		KsonObject testTwoKson(const std::string& ksonStr, const std::string& ksonFile);

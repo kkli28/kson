@@ -247,7 +247,7 @@ namespace kson {
 		int m_idx = 0;          // 当前解析的位置
 		int m_line = 1;         // 当前行号（从第一行开始）
 
-		const std::string VALID_CHARACTOR = "~!@#$%^&*()_+`1234567890-=qwertyuiopQWERTYUIOP{}|[]\\asdfghjklASDFGHJKL:;'zxcvbnmZXCVBNM<>?,./\"";  // 双引号在最后，便于字符串解析
+		const std::string VALID_CHARACTOR = " ~!@#$%^&*()_+`1234567890-=qwertyuiopQWERTYUIOP{}|[]\\asdfghjklASDFGHJKL:;'zxcvbnmZXCVBNM<>?,./\"";  // 双引号在最后，便于字符串解析
 		using KSON_UNEXPECTED_CHARACTOR = int;
 	};
 }

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "ktest.h"
 #include <fstream>
-#include <functional>
 
 using namespace kson;
 
@@ -15,36 +14,24 @@ void KsonTest::runAllTest(KsonTestType type) {
 	// 只显示测试结果
 	if (type == KsonTestType::ONLY_RESULT) {
 		try {
-			//testObject();
-			//testArray();
-			//testString();
-			//testNumber();
-			//testBool();
-			//testNull();
-
-			//testAll1();
-			//testAll2();
-			//testAll3();
-			//testAll4();
-			//testAll5();
-			//testAll6();
-
+			testAll1();
+			testAll2();
 			testSpace();
 			testComment();
 		}
 		catch (int) {
 			print("[ FAIL! ]\n");
 		}
+		print("\n");
 	}
 
-	// 显示从测试文件中读出的内容
+	// 显示从测试文件解析出的内容
 	else {
 		std::vector<std::string> files = {
 
 			// 测试: 所有数据类型的组合
 			"test_case/test_all1.kson",
-			"test_case/test_all2.kson"
-			"test_case/test_all3.kson",
+			"test_case/test_all2.kson",
 			
 			// 测试: 空格 / 注释 / 不支持字符
 			"test_case/test_space.kson",
@@ -171,46 +158,108 @@ void KsonTest::testAll1() {
 	print("\n==== test: all1 ====\n");
 
 	Kson kson("test_case/test_all1.kson");
-	auto ret = kson.parse();
-	expectEQ(ret.first, true, "");
 
-	auto obj = std::move(ret.second);
+	std::string ksonStr = "{a:1,b:\"abcd\",c:{d:1,e:\"abcd\",f:{g:1},h:[1,\"abcd\",true,{},[]]},i:[{j:1,k:\"abcd\",l:{}}]}";
+	std::string ksonFile = "test_case/test_all1.kson";
+	auto obj = testTwoKson(ksonStr, ksonFile);
+	
 	expectEQ(obj["a"].m_type, KsonType::NUMBER, "");
 	expectEQ(obj["b"].m_str, std::string("abcd"), "");
 	expectEQ(obj["c"].m_type, KsonType::OBJECT, "");
 
 	auto obj1 = std::move(obj["c"].m_object);
+	expectEQ(obj1.size(), size_t(4), "");
 	expectEQ(obj1["d"].m_num.m_int, 1, "");
-	//expectEQ(obj1)
-	// TODO: 
+	expectEQ(obj1["e"].m_str, std::string("abcd"), "");
+	expectEQ(obj1["f"].m_type, KsonType::OBJECT, "");
+	
+	auto obj2 = std::move(obj1["f"].m_object);
+	expectEQ(obj2.size(), size_t(1), "");
+	expectEQ(obj2["g"].m_num.m_int, 1, "");
+
+	expectEQ(obj1["h"].m_type, KsonType::ARRAY, "");
+
+	auto arr1 = std::move(obj1["h"].m_array);
+	expectEQ(arr1.size(), size_t(5), "");
+	expectEQ(arr1[0].m_num.m_int, 1, "");
+	expectEQ(arr1[1].m_str, std::string("abcd"), "");
+	expectEQ(arr1[2].m_bool, true, "");
+	expectEQ(arr1[3].m_type, KsonType::OBJECT, "");
+	expectEQ(arr1[3].m_object.size(), size_t(0), "");
+	expectEQ(arr1[4].m_type, KsonType::ARRAY, "");
+	expectEQ(arr1[4].m_array.size(), size_t(0), "");
+
+	expectEQ(obj["i"].m_type, KsonType::ARRAY, "");
+
+	auto arr2 = std::move(obj["i"].m_array);
+	expectEQ(arr2.size(), size_t(1), "");
+
+	auto obj3 = std::move(arr2[0].m_object);
+	expectEQ(obj3.size(), size_t(3), "");
+	expectEQ(obj3["j"].m_num.m_int, 1, "");
+	expectEQ(obj3["k"].m_str, std::string("abcd"), "");
+	expectEQ(obj3["l"].m_type, KsonType::OBJECT, "");
+	expectEQ(obj3["l"].m_object.size(), size_t(0), "");
+
+	print("[ SUCCESS! ]\n");
 }
 
-/*
 // testAll2: test_case/test_all2.kson
-bool KsonTest::testAll2() {
+void KsonTest::testAll2() {
+	print("\n==== test: all2 ====\n");
 
+	std::string ksonStr = "{a_b:0xff,cde123:-12,_:[{_a_b_:\"\\\\ \\\\ \\\\ \\\\ \\\" \\\' \\n \\t \\\\\\\\\\\\\\\\\",Abd_3dg:[null,NULL,true,TRUE,false,FALSE,-12.1234,+0xaabb,1.2e12,[],]}],/*abcd*/q12:[{},{},[],{},[],[],],zx12_1_1_1_:// abcd\n[]}";
+	std::string ksonFile = "test_case/test_all2.kson";
+	auto obj = testTwoKson(ksonStr, ksonFile);
+
+	expectEQ(obj["a_b"].m_num.m_int, 0xff, "");
+	expectEQ(obj["cde123"].m_num.m_int, -12, "");
+	expectEQ(obj["_"].m_type, KsonType::ARRAY, "");
+
+	auto arr1 = std::move(obj["_"].m_array);
+	expectEQ(arr1.size(), size_t(1), "");
+	expectEQ(arr1[0].m_type, KsonType::OBJECT, "");
+
+	auto obj1 = std::move(arr1[0].m_object);
+	expectEQ(obj1["_a_b_"].m_str, std::string("\\ \\ \\ \\ \" \' \n \t \\\\\\\\"), "");
+	expectEQ(obj1["Abd_3dg"].m_type, KsonType::ARRAY, "");
+	
+	auto arr2 = std::move(obj1["Abd_3dg"].m_array);
+	expectEQ(arr2.size(), size_t(10), "");
+	expectEQ(arr2[0].m_null, (void*)(nullptr), "");
+	expectEQ(arr2[1].m_null, (void*)(nullptr), "");
+	expectEQ(arr2[2].m_bool, true, "");
+	expectEQ(arr2[3].m_bool, true, "");
+	expectEQ(arr2[4].m_bool, false, "");
+	expectEQ(arr2[5].m_bool, false, "");
+	expectEQ(arr2[6].m_num.m_double < -12.0, true, "");
+	expectEQ(arr2[7].m_num.m_int, 0xaabb, "");
+	expectEQ(arr2[8].m_num.m_double > 1.2e11, true, "");
+	expectEQ(arr2[9].m_type, KsonType::ARRAY, "");
+
+	expectEQ(obj["q12"].m_type, KsonType::ARRAY, "");
+
+	auto arr3 = std::move(obj["q12"].m_array);
+	expectEQ(arr3.size(), size_t(6), "");
+
+	expectEQ(arr3[0].m_type, KsonType::OBJECT, "");
+	expectEQ(arr3[0].m_object.size(), size_t(0), "");
+	expectEQ(arr3[1].m_type, KsonType::OBJECT, "");
+	expectEQ(arr3[1].m_object.size(), size_t(0), "");
+	expectEQ(arr3[2].m_type, KsonType::ARRAY, "");
+	expectEQ(arr3[2].m_object.size(), size_t(0), "");
+	expectEQ(arr3[3].m_type, KsonType::OBJECT, "");
+	expectEQ(arr3[3].m_object.size(), size_t(0), "");
+	expectEQ(arr3[4].m_type, KsonType::ARRAY, "");
+	expectEQ(arr3[4].m_object.size(), size_t(0), "");
+	expectEQ(arr3[5].m_type, KsonType::ARRAY, "");
+	expectEQ(arr3[5].m_object.size(), size_t(0), "");
+
+	expectEQ(obj["zx12_1_1_1_"].m_type, KsonType::ARRAY, "");
+	expectEQ(obj["zx12_1_1_1_"].m_array.size(), size_t(0), "");
+
+	print("[ SUCCESS! ]\n");
 }
-
-// testAll3: test_case/test_all3.kson
-bool KsonTest::testAll3() {
-
-}
-
-// testAll4: test_case/test_all4.kson
-bool KsonTest::testAll4() {
-
-}
-
-// testAll5: test_case/test_all5.kson
-bool KsonTest::testAll5() {
-
-}
-
-// testAll6: test_case/test_all6.kson
-bool KsonTest::testAll6() {
-
-}
-*/
 
 // testSpace: test_case/test_space.kson
 void KsonTest::testSpace() {

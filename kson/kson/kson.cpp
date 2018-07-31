@@ -207,17 +207,27 @@ std::pair<bool, KsonStr> Kson::parseStr(const std::string& format) {
 		char c = CURRENT;
 		if (isChar('\\')) {
 			char c1 = '1';
-			if (isChar(1, 'n'))        c1 = '\n';
-			else if (isChar(1, 't'))   c1 = '\t';
-			else if (isChar(1, '\\'))  c1 = '\\';
-			else if (isChar(1, '\''))  c1 = '\'';
-			else if (isChar(1, '\"'))  c1 = '\"';
+			if (isChar(1, 'n')) {
+				c1 = '\n';
+			}
+			else if (isChar(1, 't')) {
+				c1 = '\t';
+			}
+			else if (isChar(1, '\\')) {
+				c1 = '\\';
+			}
+			else if (isChar(1, '\'')) {
+				c1 = '\'';
+			}
+			else if (isChar(1, '\"')) {
+				c1 = '\"';
+			}
 			if (c1 != '1') {
 				c = c1;
 				++m_idx;
 			}
 		}
-		result.push_back(CURRENT);
+		result.push_back(c);
 		++m_idx;
 	}
 
@@ -322,11 +332,13 @@ std::pair<bool, KsonNum> Kson::parseNum(const std::string& format) {
 		if (isInt) {
 			while (tail > 0) {
 				intNum *= 10;
+				--tail;
 			}
 		}
 		else {
 			while (tail > 0) {
 				doubleNum *= 10;
+				--tail;
 			}
 		}
 	}
@@ -515,8 +527,8 @@ std::pair<bool, KsonNum> Kson::parseHex(const std::string& format) {
 		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 	};
 
-	// 0x 后面必须要有数字
-	if (!isNum() || !isAF(CURRENT)) {
+	// 0x 后面必须要有数字或a~f或A~F的字符
+	if (!isNum() && !isAF(CURRENT)) {
 		addError(mkStr("unexpected  ", CURRENT) + ", expect number.");
 		return { false, KsonNum(true, 0, 0.0) };
 	}
@@ -546,7 +558,7 @@ void Kson::skipWS() {
 	// charactor: '0' (ASCII: 48) not supported!
 	if (!std::any_of(VALID_CHARACTOR.cbegin(), VALID_CHARACTOR.cend(), valid)) {
 
-		// '\0' 不报异常
+		// 文件结束
 		if (CURRENT == END_OF_FILE) return;
 
 		addError(mkStr("charactor: ", CURRENT) + " (ASCII: " + std::to_string(int(CURRENT)) + ") not supported!");
