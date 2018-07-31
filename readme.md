@@ -49,7 +49,10 @@ null:
              | <array>
              | 'true'
              | 'false'
+             | 'TRUE'
+             | 'FALSE'
              | 'null'
+             | 'NULL'
 
 // 字符串由多个字符组成
 <string>   ==> '"' {<char>}+ '"'
