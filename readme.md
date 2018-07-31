@@ -5,6 +5,7 @@ kson是对json进行简化的数据传输格式，说不定会用于我的各种
 
 kson支持格式：
 object, array, string, number, bool, null，其中bool类型值为true(TRUE)或false(FALSE)。
+支持C风格的注释哟~，例如 // abcd 和 /*abcd*/
 
 object: 
 以 '{' 开始，以 '}' 结束，内部是多个 key/value 对。
